@@ -2,8 +2,10 @@
 	import { lines } from '$lib/lineData';
 	import type { Metadata } from './+page.server';
 	import SearchableList from '$lib/components/SearchableList.svelte';
-	import RidershipChart from '$lib/components/RidershipChart.svelte';
 	import StatsDisplay from '$lib/components/StatsDisplay.svelte';
+	import RidershipChart from '$lib/components/RidershipChart.svelte';
+	import Disclaimer from '$lib/components/Disclaimer.svelte';
+	import Footer from '$lib/components/Footer.svelte';
 	import type { AggregatedData } from '$lib/utils/aggregation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -15,7 +17,13 @@
 	import { calculateAggregatedStats } from '$lib/utils/stats';
 	import { exportAggregatedData } from '$lib/utils/export';
 	import { copyToClipboard } from '$lib/utils/clipboard';
-	import { formatDate, getLastMonthRange } from '$lib/utils/dateUtils';
+	import {
+		formatDate,
+		getLastMonthRange,
+		getWeekStart,
+		formatMonth,
+		parseDate
+	} from '$lib/utils/dateUtils';
 
 	let { data }: { data: Metadata } = $props();
 
@@ -28,7 +36,7 @@
 	let selectedDaysOfWeek = $state<Set<string>>(
 		new Set(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'])
 	);
-	let selectedLines = $state<Set<number>>(new Set());
+	let selectedLines = $state<Set<number>>(new Set([0, 1, 2]));
 	let selectedStations = $state<Set<number>>(new Set());
 	let searchQuery = $state('');
 	let aggregationMode = $state<'hourly' | 'daily' | 'weekly' | 'monthly'>('daily');
@@ -38,7 +46,7 @@
 	let endHour = $state(24);
 
 	// Data state
-	let cachedAggregatedData: AggregatedData[] = $state([]);
+	let aggregatedData: AggregatedData[] = $state([]);
 	let copyFeedback = $state('');
 	let urlParamsLoaded = $state(false);
 	let isLoadingData = $state(false);
@@ -88,12 +96,12 @@
 				isLoadingData = true;
 			},
 			(loadedData) => {
-				cachedAggregatedData = loadedData;
+				aggregatedData = loadedData;
 				isLoadingData = false;
 				isFirstLoad = false;
 			},
 			() => {
-				cachedAggregatedData = [];
+				aggregatedData = [];
 				isLoadingData = false;
 			}
 		);
@@ -101,21 +109,10 @@
 		return cleanup;
 	});
 
-	// Filtered data with memoization
-	let lastFilterKey = '';
-	let cachedFilteredData: AggregatedData[] = [];
-
+	// Filtered data
 	const filteredData = $derived.by(() => {
-		const daysOfWeekKey = Array.from(selectedDaysOfWeek).sort().join(',');
-		const filterKey = `${startDate}-${endDate}-${cachedAggregatedData.length}-${aggregationMode}-${daysOfWeekKey}-${startHour}-${endHour}`;
-
-		if (filterKey === lastFilterKey) {
-			return cachedFilteredData;
-		}
-
-		lastFilterKey = filterKey;
-		cachedFilteredData = applyAllFilters(
-			cachedAggregatedData,
+		return applyAllFilters(
+			aggregatedData,
 			startDate,
 			endDate,
 			selectedDaysOfWeek,
@@ -123,11 +120,31 @@
 			endHour,
 			aggregationMode
 		);
-		return cachedFilteredData;
 	});
 
 	// Calculate statistics
 	const stats = $derived(calculateAggregatedStats(filteredData));
+
+	// Extract available dates from metadata (all dates between minDate and maxDate minus missingDates)
+	const availableDates = $derived.by(() => {
+		const dates = new Set<string>();
+		const missingDatesSet = new Set(data.missingDates);
+		const minDateObj = new Date(data.minDate);
+		const maxDateObj = new Date(data.maxDate);
+
+		// Generate all dates between minDate and maxDate
+		const currentDate = new Date(minDateObj);
+		while (currentDate <= maxDateObj) {
+			const dateStr = formatDate(currentDate);
+			// Only include dates that are not missing
+			if (!missingDatesSet.has(dateStr)) {
+				dates.add(dateStr);
+			}
+			currentDate.setDate(currentDate.getDate() + 1);
+		}
+
+		return dates;
+	});
 
 	// Export handler
 	function handleExport() {
@@ -158,12 +175,56 @@
 		}, 2000);
 	}
 
+	// Check if there's only one unique data point (one time period)
+	// Checks for current aggregation mode and current date range, but not specific stations
+	const hasOnlyOneDataPoint = $derived.by(() => {
+		if (!startDate || !endDate) return false;
+
+		const start = parseDate(startDate);
+		const end = parseDate(endDate);
+
+		switch (aggregationMode) {
+			case 'daily':
+				// Only 1 day is selected
+				return startDate === endDate;
+
+			case 'hourly':
+				// Only 1 hour and 1 day is selected
+				if (startDate !== endDate) return false;
+				// Check if only 1 hour is selected (endHour is exclusive, so endHour - startHour === 1 means 1 hour)
+				return endHour - startHour === 1;
+
+			case 'weekly':
+				// Only 1 week is selected (both dates fall in the same week)
+				const startWeek = getWeekStart(start);
+				const endWeek = getWeekStart(end);
+				return startWeek.getTime() === endWeek.getTime();
+
+			case 'monthly':
+				// Only 1 month is selected (both dates fall in the same month)
+				return formatMonth(start) === formatMonth(end);
+
+			default:
+				return false;
+		}
+	});
+
 	// Placeholder text
-	const placeholderText = $derived(
-		startDate && endDate && new Date(startDate) > new Date(endDate)
-			? 'Please select a valid time range.'
-			: 'Please select a line or station.'
-	);
+	const placeholderText = $derived.by(() => {
+		if (!startDate || !endDate) {
+			return 'Please select a date range.';
+		}
+		if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+			return 'Please select a valid date range.';
+		}
+		if (hasOnlyOneDataPoint) {
+			return 'Please select a longer date range.';
+		}
+		if (filteredData.length === 0) {
+			return 'Please select a line or station.';
+		}
+		return '';
+	});
 </script>
 
 <div class="flex min-h-screen flex-col bg-[#f5f1e8] font-mono">
@@ -207,6 +268,7 @@
 				maxDate={maxDateStr}
 				{lines}
 				stations={data.stations}
+				{availableDates}
 			/>
 		</div>
 
@@ -226,6 +288,16 @@
 					</div>
 				</div>
 			{:else}
+				<!-- Stats -->
+				{#if !placeholderText}
+					<StatsDisplay
+						avgRidership={stats.avgRidership}
+						totalRidership={stats.totalRidership}
+						{aggregationMode}
+					/>
+				{/if}
+
+				<!-- Chart -->
 				<RidershipChart
 					data={filteredData}
 					{aggregationMode}
@@ -236,44 +308,18 @@
 					{selectedDaysOfWeek}
 					{startHour}
 					{endHour}
+					{startDate}
+					{endDate}
 				/>
 
-				<!-- Stats -->
-				{#if filteredData.length > 0}
-					<StatsDisplay
-						avgRidership={stats.avgRidership}
-						totalRidership={stats.totalRidership}
-						{aggregationMode}
-					/>
+				<!-- Disclaimer -->
+				{#if !placeholderText}
+					<Disclaimer />
 				{/if}
 			{/if}
 		</div>
 	</div>
 
 	<!-- Footer -->
-	<footer class="bg-[#f5f1e8] p-4 text-xs text-gray-600">
-		<div class="flex flex-col gap-1">
-			<p>
-				Explore the <a
-					href="https://github.com/Vonter/transitridership"
-					class="text-teal-600 hover:underline">Code</a
-				>
-				and
-				<a
-					href="https://github.com/Vonter/bmrcl-ridership-hourly"
-					class="text-teal-600 hover:underline">Data</a
-				>
-			</p>
-			<p>
-				Inspired by the <a
-					href="https://ridership.streetsforall.org/"
-					class="text-teal-600 hover:underline">LA Metro Ridership App</a
-				>
-				from the
-				<a href="https://streetsforall.org" class="text-teal-600 hover:underline"
-					>Streets for All Data/Dev Team</a
-				>
-			</p>
-		</div>
-	</footer>
+	<Footer />
 </div>

@@ -56,6 +56,16 @@ export function loadStateFromUrl(
 		state.selectedStations = new Set(stationIndices);
 	}
 
+	// If only lines are specified, clear stations
+	if (linesParam && !stationsParam) {
+		state.selectedStations = new Set();
+	}
+
+	// If only stations are specified, clear lines
+	if (stationsParam && !linesParam) {
+		state.selectedLines = new Set();
+	}
+
 	// Read date range
 	const startParam = searchParams.get('start');
 	if (startParam && /^\d{4}-\d{2}-\d{2}$/.test(startParam)) {

@@ -5,6 +5,7 @@ export interface Metadata {
 	lines: string[];
 	minDate: string;
 	maxDate: string;
+	missingDates: string[];
 }
 
 export const load = async ({ fetch }) => {

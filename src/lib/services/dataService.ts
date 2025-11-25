@@ -1,5 +1,5 @@
 /**
- * Data fetching and caching service
+ * Data fetching service
  */
 
 import type { AggregatedData } from '$lib/utils/aggregation';
@@ -10,13 +10,6 @@ export interface PreAggregatedData {
 	weekly: Array<{ p: string; r: number }>;
 	monthly: Array<{ p: string; r: number }>;
 }
-
-// Cache for fetched data
-const dataCache = new Map<string, PreAggregatedData>();
-
-// Cache for date conversions
-const dateConversionCache = new Map<string, Date>();
-const MAX_CACHE_SIZE = 10000;
 
 /**
  * Sanitize station names for filenames
@@ -29,13 +22,9 @@ function sanitizeFilename(name: string): string {
 }
 
 /**
- * Parse date string with optimized caching
+ * Parse date string
  */
 function parseOptimizedDate(dateStr: string): Date {
-	if (dateConversionCache.has(dateStr)) {
-		return dateConversionCache.get(dateStr)!;
-	}
-
 	let parsedDateStr = dateStr;
 
 	// Handle different date formats and ensure UTC timezone
@@ -50,15 +39,7 @@ function parseOptimizedDate(dateStr: string): Date {
 		parsedDateStr = dateStr + 'T00:00:00Z';
 	}
 
-	const date = new Date(parsedDateStr);
-
-	// Clear cache if it gets too large
-	if (dateConversionCache.size >= MAX_CACHE_SIZE) {
-		dateConversionCache.clear();
-	}
-
-	dateConversionCache.set(dateStr, date);
-	return date;
+	return new Date(parsedDateStr);
 }
 
 /**
@@ -68,12 +49,6 @@ export async function fetchData(
 	type: 'station' | 'line',
 	identifier: string
 ): Promise<PreAggregatedData | null> {
-	const cacheKey = `${type}-${identifier}`;
-
-	if (dataCache.has(cacheKey)) {
-		return dataCache.get(cacheKey)!;
-	}
-
 	try {
 		const filename =
 			type === 'station'
@@ -87,7 +62,6 @@ export async function fetchData(
 		}
 
 		const jsonData = await response.json();
-		dataCache.set(cacheKey, jsonData);
 		return jsonData;
 	} catch (error) {
 		console.error(`Error fetching ${type} data:`, error);
@@ -117,12 +91,4 @@ export function convertToAggregatedData(
 	}
 
 	return result;
-}
-
-/**
- * Clear all caches (useful for testing or memory management)
- */
-export function clearDataCaches(): void {
-	dataCache.clear();
-	dateConversionCache.clear();
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DayRangeSelector from './DayRangeSelector.svelte';
 	import HourRangeSelector from './HourRangeSelector.svelte';
+	import CalendarDatePicker from './CalendarDatePicker.svelte';
 
 	let {
 		startDate = $bindable(),
@@ -10,7 +11,8 @@
 		startHour = $bindable(),
 		endHour = $bindable(),
 		minDate,
-		maxDate
+		maxDate,
+		availableDates = new Set<string>()
 	}: {
 		startDate: string;
 		endDate: string;
@@ -20,6 +22,7 @@
 		endHour: number;
 		minDate: string;
 		maxDate: string;
+		availableDates?: Set<string>;
 	} = $props();
 </script>
 
@@ -41,28 +44,16 @@
 		</div>
 
 		<!-- Date Range -->
-		<div class="flex flex-row flex-wrap gap-2">
-			<div class="flex items-center gap-2">
-				<span class="text-xs">from</span>
-				<input
-					type="date"
-					bind:value={startDate}
-					min={minDate}
-					max={maxDate}
-					class="rounded border border-gray-300 bg-white px-2 py-2 text-sm"
-				/>
-			</div>
-
-			<div class="flex items-center gap-2">
-				<span class="text-xs">to</span>
-				<input
-					type="date"
-					bind:value={endDate}
-					min={minDate}
-					max={maxDate}
-					class="rounded border border-gray-300 bg-white px-2 py-2 text-sm"
-				/>
-			</div>
+		<div class="flex items-center gap-2">
+			<span class="text-xs">between</span>
+			<CalendarDatePicker
+				bind:startDate
+				bind:endDate
+				{minDate}
+				{maxDate}
+				{aggregationMode}
+				{availableDates}
+			/>
 		</div>
 	</div>
 

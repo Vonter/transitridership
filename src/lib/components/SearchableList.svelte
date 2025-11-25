@@ -15,7 +15,8 @@
 		minDate,
 		maxDate,
 		lines,
-		stations
+		stations,
+		availableDates = new Set<string>()
 	}: {
 		selectedLines: Set<number>;
 		selectedStations: Set<number>;
@@ -30,6 +31,7 @@
 		maxDate: string;
 		lines: Line[];
 		stations: string[];
+		availableDates?: Set<string>;
 	} = $props();
 
 	// Collapsed state for tree sections
@@ -106,6 +108,7 @@
 		bind:endHour
 		{minDate}
 		{maxDate}
+		{availableDates}
 	/>
 </div>
 
@@ -115,7 +118,7 @@
 			type="text"
 			bind:value={searchQuery}
 			placeholder="Search"
-			class="w-full rounded border border-gray-300 px-3 py-2 pl-9 text-sm focus:border-transparent focus:ring-2 focus:ring-[#2563eb] focus:outline-none"
+			class="w-full rounded border border-gray-300 px-3 py-2 pl-9 text-sm"
 		/>
 		<svg
 			class="absolute top-2.5 left-3 h-4 w-4 text-gray-400"

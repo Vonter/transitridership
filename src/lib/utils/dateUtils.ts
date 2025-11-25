@@ -1,37 +1,21 @@
 /**
- * Date utility functions with caching for performance
+ * Date utility functions
  */
-
-const parsedDateCache = new Map<string, Date>();
-const dayOfWeekCache = new Map<string, string>();
 
 /**
- * Parse date from YYYY-MM-DD format with caching
+ * Parse date from YYYY-MM-DD format
  */
 export function parseDate(dateStr: string): Date {
-	if (parsedDateCache.has(dateStr)) {
-		return parsedDateCache.get(dateStr)!;
-	}
-
-	const date = new Date(dateStr + 'T00:00:00');
-	parsedDateCache.set(dateStr, date);
-	return date;
+	return new Date(dateStr + 'T00:00:00');
 }
 
 /**
- * Get day of week from date string with caching
+ * Get day of week from date string
  */
 export function getDayOfWeek(dateStr: string): string {
-	if (dayOfWeekCache.has(dateStr)) {
-		return dayOfWeekCache.get(dateStr)!;
-	}
-
 	const date = parseDate(dateStr);
 	const day = date.getDay();
-	const result = day === 0 ? 'Sunday' : day === 6 ? 'Saturday' : 'Weekday';
-
-	dayOfWeekCache.set(dateStr, result);
-	return result;
+	return day === 0 ? 'Sunday' : day === 6 ? 'Saturday' : 'Weekday';
 }
 
 /**
@@ -88,12 +72,4 @@ export function getLastMonthRange(maxDateStr: string): { start: string; end: str
 		start: formatDate(firstDay),
 		end: formatDate(lastDay)
 	};
-}
-
-/**
- * Clear all caches (useful for testing or memory management)
- */
-export function clearDateCaches(): void {
-	parsedDateCache.clear();
-	dayOfWeekCache.clear();
 }

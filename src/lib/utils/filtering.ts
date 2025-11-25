@@ -131,11 +131,6 @@ export interface AggregatedData {
 }
 
 /**
- * Cache for date range boundaries
- */
-let cachedDateRange: { start: number; end: number; key: string } | null = null;
-
-/**
  * Filter aggregated data by date range
  */
 export function filterByDateRange(
@@ -147,26 +142,16 @@ export function filterByDateRange(
 		return data;
 	}
 
-	// Cache the date range calculations
-	const rangeKey = `${startDate}-${endDate}`;
-	if (!cachedDateRange || cachedDateRange.key !== rangeKey) {
-		const start = new Date(startDate + 'T00:00:00Z');
-		const end = new Date(endDate + 'T23:59:59.999Z');
+	const start = new Date(startDate + 'T00:00:00Z');
+	const end = new Date(endDate + 'T23:59:59.999Z');
 
-		// If start is after end, return empty data
-		if (start > end) {
-			return [];
-		}
-
-		cachedDateRange = {
-			start: start.getTime(),
-			end: end.getTime(),
-			key: rangeKey
-		};
+	// If start is after end, return empty data
+	if (start > end) {
+		return [];
 	}
 
-	const startTime = cachedDateRange.start;
-	const endTime = cachedDateRange.end;
+	const startTime = start.getTime();
+	const endTime = end.getTime();
 
 	const result: AggregatedData[] = [];
 	for (let i = 0; i < data.length; i++) {

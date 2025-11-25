@@ -24,7 +24,7 @@
 
 <div class="flex flex-row flex-wrap items-center gap-2">
 	<div class="flex items-center gap-2">
-		<span class="text-xs">between</span>
+		<span class="text-xs">from</span>
 		<select
 			bind:value={startHour}
 			class="h-9 rounded border border-gray-300 bg-white px-2 py-2 text-sm"
@@ -36,7 +36,7 @@
 	</div>
 
 	<div class="flex items-center gap-2">
-		<span class="text-xs">and</span>
+		<span class="text-xs">to</span>
 		<select
 			bind:value={endHour}
 			class="h-9 rounded border border-gray-300 bg-white px-2 py-2 text-sm"

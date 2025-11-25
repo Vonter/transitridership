@@ -213,6 +213,21 @@ def main():
     stations = sorted(result['Station'].unique().to_list())
     dates = sorted(result['Date'].unique().to_list())
     
+    # Calculate missing dates between minDate and maxDate
+    min_date = datetime.strptime(dates[0], '%Y-%m-%d')
+    max_date = datetime.strptime(dates[-1], '%Y-%m-%d')
+    dates_set = set(dates)
+    
+    missing_dates = []
+    current_date = min_date
+    while current_date <= max_date:
+        date_str = current_date.strftime('%Y-%m-%d')
+        if date_str not in dates_set:
+            missing_dates.append(date_str)
+        current_date += timedelta(days=1)
+    
+    print(f"   Found {len(missing_dates)} missing dates between {dates[0]} and {dates[-1]}")
+    
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(os.path.join(output_dir, 'stations'), exist_ok=True)
@@ -224,7 +239,8 @@ def main():
         'stations': stations,
         'lines': list(LINES.keys()),
         'minDate': dates[0],
-        'maxDate': dates[-1]
+        'maxDate': dates[-1],
+        'missingDates': missing_dates
     }
     
     metadata_path = os.path.join(output_dir, 'metadata.json')

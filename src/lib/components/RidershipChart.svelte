@@ -23,7 +23,9 @@
 		copyFeedback,
 		selectedDaysOfWeek,
 		startHour,
-		endHour
+		endHour,
+		startDate,
+		endDate
 	}: {
 		data: AggregatedData[];
 		aggregationMode: 'hourly' | 'daily' | 'weekly' | 'monthly';
@@ -34,6 +36,8 @@
 		selectedDaysOfWeek?: Set<string>;
 		startHour?: number;
 		endHour?: number;
+		startDate?: string;
+		endDate?: string;
 	} = $props();
 
 	let windowWidth = $state(0);
@@ -114,10 +118,11 @@
 		const day = date.getUTCDate();
 		const year = date.getUTCFullYear();
 		const hour = String(date.getUTCHours()).padStart(2, '0');
+		const dayName = date.toLocaleString('en-US', { weekday: 'short', timeZone: 'UTC' });
 
 		const formats = {
 			hourly: fullFormat ? `${month} ${day}, ${year} at ${hour}:00` : `${month} ${day}, ${hour}:00`,
-			daily: fullFormat ? `${month} ${day}, ${year}` : `${month} ${day}`,
+			daily: fullFormat ? `${dayName}, ${month} ${day}, ${year}` : `${dayName}, ${month} ${day}`,
 			weekly: fullFormat ? `Week ${getWeekNumber(date)}, ${year}` : `Week ${getWeekNumber(date)}`,
 			monthly: `${month} ${year}`
 		};
@@ -255,7 +260,7 @@
 	});
 </script>
 
-{#if !data.length}
+{#if placeholderText}
 	<div
 		class="flex h-[350px] items-center justify-center rounded-lg border border-gray-200 bg-[#f8f6f1] p-3 shadow-sm sm:h-[400px] sm:p-6 lg:h-[500px]"
 	>
