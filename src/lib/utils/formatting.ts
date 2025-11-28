@@ -4,16 +4,22 @@
  */
 export function formatCompactNumber(value: number): string {
 	try {
-		const formatter = new Intl.NumberFormat(undefined, {
+		const locale = navigator.language || 'en-US';
+		const formatter = new Intl.NumberFormat(locale, {
 			notation: 'compact',
 			compactDisplay: 'short',
 			maximumFractionDigits: 2,
 			minimumFractionDigits: 0
 		});
 
-		return formatter.format(value);
+		let formatted = formatter.format(value);
+
+		// Replace "T" (thousand) with "K"
+		formatted = formatted.replace(/T/g, 'K');
+
+		return formatted;
 	} catch (error) {
-		return value.toLocaleString(undefined, {
+		return value.toLocaleString(navigator.language || 'en-US', {
 			maximumFractionDigits: 0
 		});
 	}
